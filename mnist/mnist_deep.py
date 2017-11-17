@@ -195,7 +195,7 @@ def resxBlock(x, channel, serial):
   with tf.name_scope('add-{0}'.format(serial)):
     sum = tf.add(h_conv2, x)
 
-  print('serial: {0}, x.shape: {1}, h_conv1.shape: {2}, sum.shape: {3}'.format(serial, x.shape, h_conv1.shape, sum.shape))
+  print('resxBlock - serial: {0}, x.shape: {1}, h_conv1.shape: {2}, sum.shape: {3}'.format(serial, x.shape, h_conv1.shape, sum.shape))
 
   return sum
 
@@ -220,7 +220,7 @@ def matchResxBlock(x, channels, serial):
   with tf.name_scope('add-{0}'.format(serial)):
     sum = tf.nn.relu(tf.add(h_conv2, h_conv3))
 
-  print('serial: {0}, x.shape: {1}, h_conv1.shape: {2}, sum.shape: {3}'.format(serial, x.shape, h_conv1.shape, sum.shape))
+  print('matchResxBlock - serial: {0}, x.shape: {1}, h_conv1.shape: {2}, sum.shape: {3}'.format(serial, x.shape, h_conv1.shape, sum.shape))
 
   return sum
 
@@ -229,26 +229,31 @@ def resnext(x):
         output = tf.reshape(x, [-1, 28, 28, 1])
 
     with tf.name_scope('reshape-conv1'):
-        W_conv = weight_variable([1, 1, 1, 32])
-        b_conv = bias_variable([32])
+        W_conv = weight_variable([1, 1, 1, 64])
+        b_conv = bias_variable([64])
         output = conv2d(output, W_conv) + b_conv
 
     for i in range(3):
-        output = resxBlock(output, 32, i)
-
-    output = matchResxBlock(output, [32, 64], 3)
-
-    for i in range(4, 7):
         output = resxBlock(output, 64, i)
 
-    with tf.name_scope('pool2'):
-        output = max_pool_2x2(output)
+    output = matchResxBlock(output, [64, 128], 3)
+
+    for i in range(4, 7):
+        output = resxBlock(output, 128, i)
+
+    output = matchResxBlock(output, [128, 256], 7)
 
     with tf.name_scope('fc1'):
-        W_fc1 = weight_variable([7 * 7 * 64, 10])
-        b_fc1 = bias_variable([10])
-        output = tf.reshape(output, [-1, 7 * 7 * 64])
+        W_fc1 = weight_variable([7 * 7 * 256, 1024])
+        b_fc1 = bias_variable([1024])
+        output = tf.reshape(output, [-1, 7 * 7 * 256])
         output = tf.matmul(output, W_fc1) + b_fc1
+
+    with tf.name_scope('fc2'):
+        W_fc2 = weight_variable([1024, 10])
+        b_fc2 = bias_variable([10])
+        output = tf.reshape(output, [-1, 1024])
+        output = tf.matmul(output, W_fc2) + b_fc2
 
     return output
 
@@ -351,7 +356,7 @@ def bn(x, trainingFlag, i):
 
   x = tf.nn.batch_normalization(x, mean, variance, beta, gamma, 0.001)
   x.set_shape(x_shape)
-  print('x.shape: {0}'.format(x.shape))
+  # print('x.shape: {0}'.format(x.shape))
 
   return x
 
@@ -405,8 +410,8 @@ def main(_):
 
   with tf.Session() as sess:
     sess.run(tf.global_variables_initializer())
-    for i in range(9000):
-      batch = mnist.train.next_batch(256)
+    for i in range(50000):
+      batch = mnist.train.next_batch(64)
       if i % 100 == 0:
         train_accuracy = accuracy.eval(feed_dict={x: batch[0], y_: batch[1]})
         print('step %d, training accuracy %g' % (i, train_accuracy))
