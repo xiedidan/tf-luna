@@ -109,6 +109,7 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument('--data_path', type=str, default='./', help='Directory for data')
     parser.add_argument('--side_length', type=int, default=64, help='Crop side length')
+    parser.add_argument('--fill', type=int, default=-1024, help='Fill (Air: -1000, water: 0, bone > 400)')
     args, _ = parser.parse_known_args()
 
     cropper = Cropper(args.data_path, side_length=args.side_length)
