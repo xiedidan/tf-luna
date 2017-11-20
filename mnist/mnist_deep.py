@@ -386,10 +386,10 @@ def main(_):
   mnist = input_data.read_data_sets(FLAGS.data_dir, one_hot=True)
 
   # Create the model
-  x = tf.placeholder(tf.float32, [None, 784])
+  x = tf.placeholder(tf.float32, [None, 784], name='input')
 
   # Define loss and optimizer
-  y_ = tf.placeholder(tf.float32, [None, 10])
+  y_ = tf.placeholder(tf.float32, [None, 10], name='label')
 
   # Build the graph for the deep net
   y_conv = resnext(x)
@@ -398,24 +398,40 @@ def main(_):
     cross_entropy = tf.nn.softmax_cross_entropy_with_logits(labels=y_, logits=y_conv)
   cross_entropy = tf.reduce_mean(cross_entropy)
 
+  with tf.name_scope('global_step'):
+    global_step = tf.Variable(0, trainable=False)
+
   with tf.name_scope('adam_optimizer'):
-    train_step = tf.train.AdamOptimizer(1e-4).minimize(cross_entropy)
+    train_step = tf.train.AdamOptimizer(1e-4).minimize(cross_entropy, global_step=global_step)
 
   with tf.name_scope('accuracy'):
     correct_prediction = tf.equal(tf.argmax(y_conv, 1), tf.argmax(y_, 1))
     correct_prediction = tf.cast(correct_prediction, tf.float32)
   accuracy = tf.reduce_mean(correct_prediction)
 
-  train_writer = tf.summary.FileWriter('d:\\project\\tf-luna\\mnist', tf.get_default_graph())
+  train_writer = tf.summary.FileWriter('./status', tf.get_default_graph())
+  saver = tf.train.Saver()
 
   with tf.Session() as sess:
     sess.run(tf.global_variables_initializer())
-    for i in range(50000):
+
+    if FLAGS.snapshot == 1:
+      latest_model = tf.train.latest_checkpoint('./snapshot/')
+      saver.restore(sess, latest_model)
+
+    for i in range(FLAGS.local_epoch):
       batch = mnist.train.next_batch(64)
-      if i % 100 == 0:
-        train_accuracy = accuracy.eval(feed_dict={x: batch[0], y_: batch[1]})
-        print('step %d, training accuracy %g' % (i, train_accuracy))
       train_step.run(feed_dict={x: batch[0], y_: batch[1]})
+
+      if (i + 1) % 100 == 0:
+        train_accuracy = accuracy.eval(feed_dict={x: batch[0], y_: batch[1]})
+        print('local step %d, global step %d, training accuracy %g' % ((i + 1), tf.train.global_step(sess, global_step), train_accuracy))
+
+      if (i + 1) % FLAGS.snapshot_interval == 0:
+        saver.save(sess, './snapshot/mnist_deep', global_step=global_step)
+
+      if tf.train.global_step(sess, global_step) >= FLAGS.max_global_epoch:
+        break
       
     print('test accuracy %g' % accuracy.eval(feed_dict={x: mnist.test.images, y_: mnist.test.labels}))
 
@@ -424,5 +440,17 @@ if __name__ == '__main__':
   parser.add_argument('--data_dir', type=str,
                       default='/tmp/tensorflow/mnist/input_data',
                       help='Directory for storing input data')
+  parser.add_argument('--snapshot_interval', type=int,
+                      default=200,
+                      help='Snapshot interval')
+  parser.add_argument('--snapshot', type=int,
+                      default=0,
+                      help='Snapshot switch')
+  parser.add_argument('--max_global_epoch', type=int,
+                      default=50000,
+                      help='Max global_step count')
+  parser.add_argument('--local_epoch', type=int,
+                      default=50000,
+                      help='Max epoch in this run')
   FLAGS, unparsed = parser.parse_known_args()
   tf.app.run(main=main, argv=[sys.argv[0]] + unparsed)

@@ -23,24 +23,9 @@ class CropChecker(object):
         self.serializer = Serializer(self.data_path)
 
     def extract_file(self, filename):
-        raw_image = sitk.ReadImage(filename)
         seriesuid = os.path.basename(filename).split('.')[0]
-
-        world_origin = np.array(raw_image.GetOrigin())[::-1]
-        self.serializer.writeNpy('info/', seriesuid + '.world_origin', world_origin)
-
-        direction = np.array(raw_image.GetDirection())[::-1]
-        direction = np.array([direction[0], direction[4], direction[8]])
-        self.serializer.writeNpy('info/', seriesuid + '.direction', direction)
-        if any(direction < 0):
-            print('direction: {0}'.format(direction))
-
-        '''
-        range = [0, 0]
-        image = np.reshape(sitk.GetArrayFromImage(raw_image), -1)
-        range = {'min': np.min(image), 'max': np.max(image)}
-        print('{0} - min: {1}, max: {2}'.format(seriesuid, range['min'], range['max']))
-        '''
+        self.serializer.readNpy('crop/', seriesuid + '.npy')
+        
         
         self.progress_bar.update(1)
 
