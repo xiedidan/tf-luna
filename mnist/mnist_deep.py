@@ -181,13 +181,13 @@ def resnet3(x):
 
 def resxBlock(x, channel, serial):
   with tf.name_scope('conv-{0}-1'.format(serial)):
-    pa1 = tf.nn.relu(bn(x, True, serial * 2))
+    pa1 = tf.nn.relu(bn(x, True, 'bn{0}'.format(serial * 2)))
     W_conv1 = weight_variable([3, 3, channel, channel])
     b_conv1 = bias_variable([channel])
     h_conv1 = conv2d(pa1, W_conv1) + b_conv1
 
   with tf.name_scope('conv-{0}-2'.format(serial)):
-    pa2 = tf.nn.relu(bn(h_conv1, True, serial * 2 + 1))
+    pa2 = tf.nn.relu(bn(h_conv1, True, 'bn{0}'.format(serial * 2 + 1)))
     W_conv2 = weight_variable([3, 3, channel, channel])
     b_conv2 = bias_variable([channel])
     h_conv2 = conv2d(pa2, W_conv2) + b_conv2
@@ -201,13 +201,13 @@ def resxBlock(x, channel, serial):
 
 def matchResxBlock(x, channels, serial):
   with tf.name_scope('conv-{0}-1'.format(serial)):
-    pa1 = tf.nn.relu(bn(x, True, serial * 2))
+    pa1 = tf.nn.relu(bn(x, True, 'bn{0}'.format(serial * 2)))
     W_conv1 = weight_variable([3, 3, channels[0], channels[1]])
     b_conv1 = bias_variable([channels[1]])
     h_conv1 = conv2ds2(pa1, W_conv1) + b_conv1
 
   with tf.name_scope('conv-{0}-2'.format(serial)):
-    pa2 = pa1 = tf.nn.relu(bn(h_conv1, True, serial * 2 + 1))
+    pa2 = pa1 = tf.nn.relu(bn(h_conv1, True, 'bn{0}'.format(serial * 2 + 1)))
     W_conv2 = weight_variable([3, 3, channels[1], channels[1]])
     b_conv2 = bias_variable([channels[1]])
     h_conv2 = conv2d(pa2, W_conv2) + b_conv2
@@ -329,57 +329,40 @@ def weight_variable(shape):
 
 
 def bias_variable(shape):
-  """bias_variable generates a bias variable of a given shape."""
-  initial = tf.constant(0.1, shape=shape)
-  return tf.Variable(initial)
+	"""bias_variable generates a bias variable of a given shape."""
+	initial = tf.constant(0.1, shape=shape)
+	return tf.Variable(initial)
 
-def bn(x, trainingFlag, i):
+def bn(x, training_flag, scope, decay=0.9997, epsilon=0.001):
   x_shape = x.get_shape()
   params_shape = x_shape[-1:]
-
+  
   axis = list(range(len(x_shape) - 1))
 
-  beta = _get_variable('beta{0}'.format(i), params_shape, initializer=tf.zeros_initializer)
-  gamma = _get_variable('gamma{0}'.format(i), params_shape, initializer=tf.ones_initializer)
+  with tf.variable_scope(scope):
+    beta = tf.get_variable('beta', params_shape, initializer=tf.zeros_initializer)
+    gamma = tf.get_variable('gamma', params_shape, initializer=tf.ones_initializer)
 
-  moving_mean = _get_variable('moving_mean{0}'.format(i), params_shape, initializer=tf.zeros_initializer, trainable=False)
-  moving_variance = _get_variable('moving_variance{0}'.format(i), params_shape, initializer=tf.ones_initializer, trainable=False)
+    moving_mean = tf.get_variable('moving_mean', params_shape, initializer=tf.zeros_initializer, trainable=False)
+    moving_variance = tf.get_variable('moving_variance', params_shape, initializer=tf.ones_initializer, trainable=False)
 
-  # These ops will only be preformed when training.
-  mean, variance = tf.nn.moments(x, axis)
-  update_moving_mean = moving_averages.assign_moving_average(moving_mean, mean, 0.9997)
-  update_moving_variance = moving_averages.assign_moving_average(moving_variance, variance, 0.9997)
-  tf.add_to_collection('resnet_update_ops', update_moving_mean)
-  tf.add_to_collection('resnet_update_ops', update_moving_variance)
+  with tf.name_scope(scope):
+    # These ops will only be preformed when training.
+    mean, variance = tf.nn.moments(x, axis)
+    update_moving_mean = moving_averages.assign_moving_average(moving_mean, mean, decay)
+    update_moving_variance = moving_averages.assign_moving_average(moving_variance, variance, decay)
 
-  mean, variance = control_flow_ops.cond(tf.convert_to_tensor(trainingFlag, dtype='bool', name='is_training'), lambda: (mean, variance), lambda: (moving_mean, moving_variance))
+    # define deps here to prevent global deps
+    def mean_var_with_update():
+      with tf.control_dependencies([update_moving_mean, update_moving_variance]):
+        return mean, variance
 
-  x = tf.nn.batch_normalization(x, mean, variance, beta, gamma, 0.001)
-  x.set_shape(x_shape)
-  # print('x.shape: {0}'.format(x.shape))
+    mean, variance = control_flow_ops.cond(tf.convert_to_tensor(training_flag, dtype='bool', name='is_training'), mean_var_with_update, lambda: (moving_mean, moving_variance))
+
+    x = tf.nn.batch_normalization(x, mean, variance, beta, gamma, epsilon)
+    x.set_shape(x_shape)
 
   return x
-
-def _get_variable(name,
-                shape,
-                initializer,
-                weight_decay=0.0,
-                dtype='float',
-                trainable=True):
-  "A little wrapper around tf.get_variable to do weight decay and add to"
-  "resnet collection"
-  if weight_decay > 0:
-      regularizer = tf.contrib.layers.l2_regularizer(weight_decay)
-  else:
-      regularizer = None
-  collections = [tf.GraphKeys.GLOBAL_VARIABLES, 'resnet_variables']
-  return tf.get_variable(name,
-                          shape=shape,
-                          initializer=initializer,
-                          dtype=dtype,
-                          regularizer=regularizer,
-                          collections=collections,
-                          trainable=trainable)
 
 def main(_):
   # Import data
