@@ -33,6 +33,7 @@ import tempfile
 from tensorflow.examples.tutorials.mnist import input_data
 
 import tensorflow as tf
+from tensorflow.python.framework import ops
 from tensorflow.python.ops import control_flow_ops
 from tensorflow.python.training import moving_averages
 
@@ -42,7 +43,8 @@ def resBlock2(x, channel, serial):
   with tf.name_scope('conv-{0}-1'.format(serial)):
     W_conv1 = weight_variable([3, 3, channel, channel])
     b_conv1 = bias_variable([channel])
-    h_conv1 = tf.nn.relu(bn(conv2d(x, W_conv1) + b_conv1, True, serial * 2))
+    #h_conv1 = tf.nn.relu(bn(conv2d(x, W_conv1) + b_conv1, True, serial * 2))
+    h_conv1 = selu(bn(conv2d(x, W_conv1) + b_conv1, True, serial * 2))
 
   with tf.name_scope('conv-{0}-2'.format(serial)):
     W_conv2 = weight_variable([3, 3, channel, channel])
@@ -50,7 +52,8 @@ def resBlock2(x, channel, serial):
     h_conv2 = bn(conv2d(h_conv1, W_conv2) + b_conv2, True, serial * 2 + 1)
 
   with tf.name_scope('add-{0}'.format(serial)):
-    sum = tf.nn.relu(tf.add(h_conv2, x))
+    #sum = tf.nn.relu(tf.add(h_conv2, x))
+    sum = selu(tf.add(h_conv2, x))
 
   print('serial: {0}, x.shape: {1}, h_conv1.shape: {2}, sum.shape: {3}'.format(serial, x.shape, h_conv1.shape, sum.shape))
 
@@ -60,12 +63,14 @@ def resBlock3(x, channel, serial):
   with tf.name_scope('conv-{0}-1'.format(serial)):
     W_conv1 = weight_variable([1, 1, channel, channel // 4])
     b_conv1 = bias_variable([channel // 4])
-    h_conv1 = tf.nn.relu(bn(conv2d(x, W_conv1) + b_conv1, True, serial * 3))
+    #h_conv1 = tf.nn.relu(bn(conv2d(x, W_conv1) + b_conv1, True, serial * 3))
+    h_conv1 = selu(bn(conv2d(x, W_conv1) + b_conv1, True, serial * 3))
 
   with tf.name_scope('conv-{0}-2'.format(serial)):
     W_conv2 = weight_variable([3, 3, channel // 4, channel // 4])
     b_conv2 = bias_variable([channel // 4])
-    h_conv2 = tf.nn.relu(bn(conv2d(h_conv1, W_conv2) + b_conv2, True, serial * 3 + 1))
+    #h_conv2 = tf.nn.relu(bn(conv2d(h_conv1, W_conv2) + b_conv2, True, serial * 3 + 1))
+    h_conv2 = selu(bn(conv2d(h_conv1, W_conv2) + b_conv2, True, serial * 3 + 1))
 
   with tf.name_scope('conv-{0}-3'.format(serial)):
     W_conv3 = weight_variable([1, 1, channel // 4, channel])
@@ -73,7 +78,8 @@ def resBlock3(x, channel, serial):
     h_conv3 = bn(conv2d(h_conv2, W_conv3) + b_conv3, True, serial * 3 + 2)
 
   with tf.name_scope('add-{0}'.format(serial)):
-    sum = tf.nn.relu(tf.add(h_conv3, x))
+    #sum = tf.nn.relu(tf.add(h_conv3, x))
+    sum = selu(tf.add(h_conv3, x))
 
   print('serial: {0}, x.shape: {1}, h_conv1.shape: {2}, sum.shape: {3}'.format(serial, x.shape, h_conv1.shape, sum.shape))
 
@@ -83,7 +89,8 @@ def matchResBlock2(x, channels, serial):
   with tf.name_scope('conv-{0}-1'.format(serial)):
     W_conv1 = weight_variable([3, 3, channels[0], channels[1]])
     b_conv1 = bias_variable([channels[1]])
-    h_conv1 = tf.nn.relu(bn(conv2ds2(x, W_conv1) + b_conv1, True, serial * 2))
+    #h_conv1 = tf.nn.relu(bn(conv2ds2(x, W_conv1) + b_conv1, True, serial * 2))
+    h_conv1 = selu(bn(conv2ds2(x, W_conv1) + b_conv1, True, serial * 2))
 
   with tf.name_scope('conv-{0}-2'.format(serial)):
     W_conv2 = weight_variable([3, 3, channels[1], channels[1]])
@@ -96,7 +103,8 @@ def matchResBlock2(x, channels, serial):
     h_conv3 = conv2ds2(x, W_conv3) + b_conv3
 
   with tf.name_scope('add-{0}'.format(serial)):
-    sum = tf.nn.relu(tf.add(h_conv2, h_conv3))
+    #sum = tf.nn.relu(tf.add(h_conv2, h_conv3))
+    sum = selu(tf.add(h_conv2, h_conv3))
 
   print('serial: {0}, x.shape: {1}, h_conv1.shape: {2}, sum.shape: {3}'.format(serial, x.shape, h_conv1.shape, sum.shape))
 
@@ -106,12 +114,14 @@ def matchResBlock3(x, channels, serial):
   with tf.name_scope('conv-{0}-1'.format(serial)):
     W_conv1 = weight_variable([1, 1, channels[0], channels[1] // 4])
     b_conv1 = bias_variable([channels[1] // 4])
-    h_conv1 = tf.nn.relu(bn(conv2ds2(x, W_conv1) + b_conv1, True, serial * 3))
+    #h_conv1 = tf.nn.relu(bn(conv2ds2(x, W_conv1) + b_conv1, True, serial * 3))
+    h_conv1 = selu(bn(conv2ds2(x, W_conv1) + b_conv1, True, serial * 3))
 
   with tf.name_scope('conv-{0}-2'.format(serial)):
     W_conv2 = weight_variable([3, 3, channels[1] // 4, channels[1] // 4])
     b_conv2 = bias_variable([channels[1] // 4])
-    h_conv2 = tf.nn.relu(bn(conv2d(h_conv1, W_conv2) + b_conv2, True, serial * 3 + 1))
+    #h_conv2 = tf.nn.relu(bn(conv2d(h_conv1, W_conv2) + b_conv2, True, serial * 3 + 1))
+    h_conv2 = selu(bn(conv2d(h_conv1, W_conv2) + b_conv2, True, serial * 3 + 1))
 
   with tf.name_scope('conv-{0}-3'.format(serial)):
     W_conv3 = weight_variable([1, 1, channels[1] // 4, channels[1]])
@@ -124,7 +134,8 @@ def matchResBlock3(x, channels, serial):
     h_conv4 = conv2ds2(x, W_conv4) + b_conv4
 
   with tf.name_scope('add-{0}'.format(serial)):
-    sum = tf.nn.relu(tf.add(h_conv3, h_conv4))
+    #sum = tf.nn.relu(tf.add(h_conv3, h_conv4))
+    sum = selu(tf.add(h_conv3, h_conv4))
 
   print('serial: {0}, x.shape: {1}, h_conv1.shape: {2}, sum.shape: {3}'.format(serial, x.shape, h_conv1.shape, sum.shape))
 
@@ -181,13 +192,15 @@ def resnet3(x):
 
 def resxBlock(x, channel, serial):
   with tf.name_scope('conv-{0}-1'.format(serial)):
-    pa1 = tf.nn.relu(bn(x, True, 'bn{0}'.format(serial * 2)))
+    #pa1 = tf.nn.relu(bn(x, True, serial * 2))
+    pa1 = selu(bn(x, True, serial * 2))
     W_conv1 = weight_variable([3, 3, channel, channel])
     b_conv1 = bias_variable([channel])
     h_conv1 = conv2d(pa1, W_conv1) + b_conv1
 
   with tf.name_scope('conv-{0}-2'.format(serial)):
-    pa2 = tf.nn.relu(bn(h_conv1, True, 'bn{0}'.format(serial * 2 + 1)))
+    #pa2 = tf.nn.relu(bn(h_conv1, True, serial * 2 + 1))
+    pa2 = selu(bn(h_conv1, True, serial * 2 + 1))
     W_conv2 = weight_variable([3, 3, channel, channel])
     b_conv2 = bias_variable([channel])
     h_conv2 = conv2d(pa2, W_conv2) + b_conv2
@@ -201,13 +214,15 @@ def resxBlock(x, channel, serial):
 
 def matchResxBlock(x, channels, serial):
   with tf.name_scope('conv-{0}-1'.format(serial)):
-    pa1 = tf.nn.relu(bn(x, True, 'bn{0}'.format(serial * 2)))
+    #pa1 = tf.nn.relu(bn(x, True, serial * 2))
+    pa1 = selu(bn(x, True, serial * 2))
     W_conv1 = weight_variable([3, 3, channels[0], channels[1]])
     b_conv1 = bias_variable([channels[1]])
     h_conv1 = conv2ds2(pa1, W_conv1) + b_conv1
 
   with tf.name_scope('conv-{0}-2'.format(serial)):
-    pa2 = pa1 = tf.nn.relu(bn(h_conv1, True, 'bn{0}'.format(serial * 2 + 1)))
+    #pa2 = pa1 = tf.nn.relu(bn(h_conv1, True, serial * 2 + 1))
+    pa2 = pa1 = selu(bn(h_conv1, True, serial * 2 + 1))
     W_conv2 = weight_variable([3, 3, channels[1], channels[1]])
     b_conv2 = bias_variable([channels[1]])
     h_conv2 = conv2d(pa2, W_conv2) + b_conv2
@@ -218,7 +233,8 @@ def matchResxBlock(x, channels, serial):
     h_conv3 = conv2ds2(x, W_conv3) + b_conv3
 
   with tf.name_scope('add-{0}'.format(serial)):
-    sum = tf.nn.relu(tf.add(h_conv2, h_conv3))
+    #sum = tf.nn.relu(tf.add(h_conv2, h_conv3))
+    sum = selu(tf.add(h_conv2, h_conv3))
 
   print('matchResxBlock - serial: {0}, x.shape: {1}, h_conv1.shape: {2}, sum.shape: {3}'.format(serial, x.shape, h_conv1.shape, sum.shape))
 
@@ -280,7 +296,8 @@ def deepnn(x):
   with tf.name_scope('conv1'):
     W_conv1 = weight_variable([5, 5, 1, 32])
     b_conv1 = bias_variable([32])
-    h_conv1 = tf.nn.relu(conv2d(x_image, W_conv1) + b_conv1)
+    #h_conv1 = tf.nn.relu(conv2d(x_image, W_conv1) + b_conv1)
+    h_conv1 = selu(conv2d(x_image, W_conv1) + b_conv1)
 
   # Pooling layer - downsamples by 2X.
   with tf.name_scope('pool1'):
@@ -290,7 +307,8 @@ def deepnn(x):
   with tf.name_scope('conv2'):
     W_conv2 = weight_variable([5, 5, 32, 64])
     b_conv2 = bias_variable([64])
-    h_conv2 = tf.nn.relu(conv2d(h_pool1, W_conv2) + b_conv2)
+    #h_conv2 = tf.nn.relu(conv2d(h_pool1, W_conv2) + b_conv2)
+    h_conv2 = selu(conv2d(h_pool1, W_conv2) + b_conv2)
 
   # Second pooling layer.
   with tf.name_scope('pool2'):
@@ -329,40 +347,101 @@ def weight_variable(shape):
 
 
 def bias_variable(shape):
-	"""bias_variable generates a bias variable of a given shape."""
-	initial = tf.constant(0.1, shape=shape)
-	return tf.Variable(initial)
+  """bias_variable generates a bias variable of a given shape."""
+  initial = tf.constant(0.1, shape=shape)
+  return tf.Variable(initial)
 
-def bn(x, training_flag, scope, decay=0.9997, epsilon=0.001):
+def bn(x, trainingFlag, i):
   x_shape = x.get_shape()
   params_shape = x_shape[-1:]
-  
+
   axis = list(range(len(x_shape) - 1))
 
-  with tf.variable_scope(scope):
-    beta = tf.get_variable('beta', params_shape, initializer=tf.zeros_initializer)
-    gamma = tf.get_variable('gamma', params_shape, initializer=tf.ones_initializer)
+  beta = _get_variable('beta{0}'.format(i), params_shape, initializer=tf.zeros_initializer)
+  gamma = _get_variable('gamma{0}'.format(i), params_shape, initializer=tf.ones_initializer)
 
-    moving_mean = tf.get_variable('moving_mean', params_shape, initializer=tf.zeros_initializer, trainable=False)
-    moving_variance = tf.get_variable('moving_variance', params_shape, initializer=tf.ones_initializer, trainable=False)
+  moving_mean = _get_variable('moving_mean{0}'.format(i), params_shape, initializer=tf.zeros_initializer, trainable=False)
+  moving_variance = _get_variable('moving_variance{0}'.format(i), params_shape, initializer=tf.ones_initializer, trainable=False)
 
-  with tf.name_scope(scope):
-    # These ops will only be preformed when training.
-    mean, variance = tf.nn.moments(x, axis)
-    update_moving_mean = moving_averages.assign_moving_average(moving_mean, mean, decay)
-    update_moving_variance = moving_averages.assign_moving_average(moving_variance, variance, decay)
+  # These ops will only be preformed when training.
+  mean, variance = tf.nn.moments(x, axis)
+  update_moving_mean = moving_averages.assign_moving_average(moving_mean, mean, 0.9997)
+  update_moving_variance = moving_averages.assign_moving_average(moving_variance, variance, 0.9997)
+  tf.add_to_collection('resnet_update_ops', update_moving_mean)
+  tf.add_to_collection('resnet_update_ops', update_moving_variance)
 
-    # define deps here to prevent global deps
-    def mean_var_with_update():
-      with tf.control_dependencies([update_moving_mean, update_moving_variance]):
-        return mean, variance
+  mean, variance = control_flow_ops.cond(tf.convert_to_tensor(trainingFlag, dtype='bool', name='is_training'), lambda: (mean, variance), lambda: (moving_mean, moving_variance))
 
-    mean, variance = control_flow_ops.cond(tf.convert_to_tensor(training_flag, dtype='bool', name='is_training'), mean_var_with_update, lambda: (moving_mean, moving_variance))
-
-    x = tf.nn.batch_normalization(x, mean, variance, beta, gamma, epsilon)
-    x.set_shape(x_shape)
+  x = tf.nn.batch_normalization(x, mean, variance, beta, gamma, 0.001)
+  x.set_shape(x_shape)
+  # print('x.shape: {0}'.format(x.shape))
 
   return x
+
+# add selu
+def selu(x):
+    with ops.name_scope('elu') as scope:
+        alpha = 1.6732632423543772848170429916717
+        scale = 1.0507009873554804934193349852946
+        return scale*tf.where(x>=0.0, x, alpha*tf.nn.elu(x))
+
+def dropout_selu(x, keep_prob, alpha= -1.7580993408473766, fixedPointMean=0.0, fixedPointVar=1.0,
+                 noise_shape=None, seed=None, name=None, training=False):
+    """Dropout to a value with rescaling."""
+
+    def dropout_selu_impl(x, rate, alpha, noise_shape, seed, name):
+        keep_prob = 1.0 - rate
+        x = ops.convert_to_tensor(x, name="x")
+        if isinstance(keep_prob, numbers.Real) and not 0 < keep_prob <= 1:
+            raise ValueError("keep_prob must be a scalar tensor or a float in the "
+                                             "range (0, 1], got %g" % keep_prob)
+        keep_prob = ops.convert_to_tensor(keep_prob, dtype=x.dtype, name="keep_prob")
+        keep_prob.get_shape().assert_is_compatible_with(tensor_shape.scalar())
+
+        alpha = ops.convert_to_tensor(alpha, dtype=x.dtype, name="alpha")
+        keep_prob.get_shape().assert_is_compatible_with(tensor_shape.scalar())
+
+        if tensor_util.constant_value(keep_prob) == 1:
+            return x
+
+        noise_shape = noise_shape if noise_shape is not None else array_ops.shape(x)
+        random_tensor = keep_prob
+        random_tensor += random_ops.random_uniform(noise_shape, seed=seed, dtype=x.dtype)
+        binary_tensor = math_ops.floor(random_tensor)
+        ret = x * binary_tensor + alpha * (1-binary_tensor)
+
+        a = tf.sqrt(fixedPointVar / (keep_prob *((1-keep_prob) * tf.pow(alpha-fixedPointMean,2) + fixedPointVar)))
+
+        b = fixedPointMean - a * (keep_prob * fixedPointMean + (1 - keep_prob) * alpha)
+        ret = a * ret + b
+        ret.set_shape(x.get_shape())
+        return ret
+
+    with ops.name_scope(name, "dropout", [x]) as name:
+        return utils.smart_cond(training,
+                                lambda: dropout_selu_impl(x, keep_prob, alpha, noise_shape, seed, name),
+                                lambda: array_ops.identity(x))
+
+def _get_variable(name,
+                shape,
+                initializer,
+                weight_decay=0.0,
+                dtype='float',
+                trainable=True):
+  "A little wrapper around tf.get_variable to do weight decay and add to"
+  "resnet collection"
+  if weight_decay > 0:
+      regularizer = tf.contrib.layers.l2_regularizer(weight_decay)
+  else:
+      regularizer = None
+  collections = [tf.GraphKeys.GLOBAL_VARIABLES, 'resnet_variables']
+  return tf.get_variable(name,
+                          shape=shape,
+                          initializer=initializer,
+                          dtype=dtype,
+                          regularizer=regularizer,
+                          collections=collections,
+                          trainable=trainable)
 
 def main(_):
   # Import data
